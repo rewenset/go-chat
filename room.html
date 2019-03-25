@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+ 
+<head>
+    <title>Chat room</title>
+    <script type = "text/javascript">
+        var chatSocket = new WebSocket("ws://localhost:8000/room/{{ . }}/chat");
+
+        chatSocket.onopen = function() {
+            chatSocket.send("some handshake message text here");
+        };
+        chatSocket.onmessage = addMsg
+        
+        function addMsg(e) {
+            var msg = document.createElement('div');
+            msg.innerHTML = e.data;
+            document.getElementById('chatWindow').appendChild(msg);
+        }
+
+        function sendMsg() {
+            var msgField = document.getElementById('msgField')
+            chatSocket.send(msgField.value)
+            msgField.value = ''
+        }
+     </script>
+</head>
+ 
+<body>
+    <div>
+        <div>Chat room: {{ . }}</div>
+        <div id="chatWindow">chat window here</div>
+        <div>
+            <input type="text" id="msgField">
+            <input type="submit", id="msgBtn" onclick="sendMsg()">
+        </div>
+    </div>
+</body>
+</html>
