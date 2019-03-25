@@ -6,7 +6,13 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/gorilla/websocket"
 )
+
+var upgrader = websocket.Upgrader{
+	// do not check origin for now
+	CheckOrigin: func(r *http.Request) bool { return true },
+}
 
 func main() {
 	r := mux.NewRouter().StrictSlash(true)
@@ -22,6 +28,20 @@ func index(w http.ResponseWriter, r *http.Request) {
 }
 
 func room(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	fmt.Fprintf(w, "In room %s", vars["roomID"])
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	for {
+		messageType, p, err := conn.ReadMessage()
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		if err := conn.WriteMessage(messageType, p); err != nil {
+			log.Println(err)
+			return
+		}
+	}
 }
