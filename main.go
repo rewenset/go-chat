@@ -10,8 +10,8 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-var indexTmpl = template.Must(template.ParseFiles("index.html"))
-var roomTmpl = template.Must(template.ParseFiles("room.html"))
+var indexTmpl = template.Must(template.ParseFiles("templates/index.html"))
+var roomTmpl = template.Must(template.ParseFiles("templates/room.html"))
 
 var upgrader = websocket.Upgrader{
 	// do not check origin for now
