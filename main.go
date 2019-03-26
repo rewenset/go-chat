@@ -89,9 +89,9 @@ func chat(w http.ResponseWriter, r *http.Request) {
 		log.Printf("received message with type %d", messageType)
 		if err != nil {
 			log.Println(err)
-			return
-		}
-		if messageType == websocket.TextMessage {
+			LeaveRoom(roomID, conn)
+			break
+		} else if messageType == websocket.TextMessage {
 			BroadcastInRoom(roomID, p)
 		}
 	}

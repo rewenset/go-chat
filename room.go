@@ -9,7 +9,7 @@ import (
 
 // SimpleRoom store only WebSocket connections
 type SimpleRoom struct {
-	users []*websocket.Conn
+	users map[*websocket.Conn]bool
 }
 
 var rooms map[string]*SimpleRoom
@@ -23,7 +23,9 @@ func CreateRoom(roomID string) error {
 	if IsRoomExist(roomID) {
 		return fmt.Errorf("room with id %s already exists", roomID)
 	}
-	rooms[roomID] = &SimpleRoom{}
+	rooms[roomID] = &SimpleRoom{
+		users: make(map[*websocket.Conn]bool),
+	}
 	return nil
 }
 
@@ -37,15 +39,20 @@ func IsRoomExist(roomID string) bool {
 
 // JoinRoom add conection to the users of selected room
 func JoinRoom(roomID string, conn *websocket.Conn) {
-	rooms[roomID].users = append(rooms[roomID].users, conn)
+	rooms[roomID].users[conn] = true
 }
 
-// BroadcastInRoom send message to all users
+// LeaveRoom removes connection from the users of selected room
+func LeaveRoom(roomID string, conn *websocket.Conn) {
+	delete(rooms[roomID].users, conn)
+}
+
+// BroadcastInRoom send message to all users in the room
 func BroadcastInRoom(roomID string, msg []byte) {
 	chatRoom := rooms[roomID]
-	for i, c := range chatRoom.users {
-		if err := c.WriteMessage(websocket.TextMessage, msg); err != nil {
-			chatRoom.users = append(chatRoom.users[:i], chatRoom.users[i+1:]...)
+	for conn := range chatRoom.users {
+		if err := conn.WriteMessage(websocket.TextMessage, msg); err != nil {
+			LeaveRoom(roomID, conn)
 			log.Println(err)
 		}
 	}
