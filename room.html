@@ -3,6 +3,31 @@
  
 <head>
     <title>Chat room</title>
+    <style>
+        #chatWindow {
+            margin: 10px;
+            padding: 10px;
+            border: 2px solid;
+        }
+        #msgWindow {
+            margin: 10px;
+            padding: 10px;
+        }
+    </style>
+</head>
+ 
+<body>
+    <div>
+        <div>Chat room: {{ . }}</div>
+        <div id="chatWindow"></div>
+        <div id="msgWindow">
+            <form onsubmit="event.preventDefault();">
+                <input type="text" id="msgField">
+                <button id="msgBtn" onclick="sendMsg()">send</button>
+            </form>
+        </div>
+    </div>
+
     <script type = "text/javascript">
         var chatSocket = new WebSocket("ws://localhost:8000/room/{{ . }}/chat");
 
@@ -12,9 +37,13 @@
         chatSocket.onmessage = addMsg
         
         function addMsg(e) {
-            var msg = document.createElement('div');
-            msg.innerHTML = e.data;
-            document.getElementById('chatWindow').appendChild(msg);
+            var msgDiv = document.createElement('div');
+            msgDiv.style.marginTop = "5px";
+            msgDiv.style.paddingBottom = "5px";
+            msgDiv.style.paddingTop = "5px";
+            msgDiv.style.background = "rgb(255, 255, 237)"
+            msgDiv.innerHTML = e.data;
+            document.getElementById('chatWindow').appendChild(msgDiv);
         }
 
         function sendMsg() {
@@ -23,16 +52,5 @@
             msgField.value = ''
         }
      </script>
-</head>
- 
-<body>
-    <div>
-        <div>Chat room: {{ . }}</div>
-        <div id="chatWindow">chat window here</div>
-        <div>
-            <input type="text" id="msgField">
-            <input type="submit", id="msgBtn" onclick="sendMsg()">
-        </div>
-    </div>
 </body>
 </html>
