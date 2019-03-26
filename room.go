@@ -9,7 +9,8 @@ import (
 
 // SimpleRoom store only WebSocket connections
 type SimpleRoom struct {
-	users map[*websocket.Conn]bool
+	users    map[*websocket.Conn]bool
+	messages [][]byte
 }
 
 var rooms map[string]*SimpleRoom
@@ -50,6 +51,8 @@ func LeaveRoom(roomID string, conn *websocket.Conn) {
 // BroadcastInRoom send message to all users in the room
 func BroadcastInRoom(roomID string, msg []byte) {
 	chatRoom := rooms[roomID]
+	chatRoom.messages = append(chatRoom.messages, msg)
+	log.Println(chatRoom.messages)
 	for conn := range chatRoom.users {
 		if err := conn.WriteMessage(websocket.TextMessage, msg); err != nil {
 			LeaveRoom(roomID, conn)

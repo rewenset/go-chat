@@ -18,7 +18,10 @@
  
 <body>
     <div>
-        <div>Chat room: {{ . }}</div>
+        <div>
+            <h1>Chat room: {{ . }}</h1>
+            <p>(<a href="/">leave the room</a>)</p>
+        </div>
         <div id="chatWindow"></div>
         <div id="msgWindow">
             <form onsubmit="event.preventDefault();">
