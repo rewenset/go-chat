@@ -25,8 +25,17 @@ func main() {
 	r.HandleFunc("/room", newRoom).Methods("POST")
 	r.HandleFunc("/room/{roomID}", room)
 	r.HandleFunc("/room/{roomID}/chat", chat)
+	r.Use(logger)
 
+	log.Println("Starting go-chat server on localhost:8000")
 	log.Fatal(http.ListenAndServe(":8000", r))
+}
+
+func logger(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("%s %s", r.Method, r.RequestURI)
+		h.ServeHTTP(w, r)
+	})
 }
 
 func index(w http.ResponseWriter, r *http.Request) {
@@ -86,7 +95,7 @@ func chat(w http.ResponseWriter, r *http.Request) {
 
 	for {
 		messageType, p, err := conn.ReadMessage()
-		log.Printf("received message with type %d", messageType)
+		log.Printf("message received (type %d)", messageType)
 		if err != nil {
 			log.Println(err)
 			LeaveRoom(roomID, conn)

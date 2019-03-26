@@ -30,7 +30,7 @@ func CreateRoom(roomID string) error {
 	return nil
 }
 
-//IsRoomExist checks if room with is already created
+// IsRoomExist checks if room with is already created
 func IsRoomExist(roomID string) bool {
 	if _, ok := rooms[roomID]; ok {
 		return true
@@ -52,7 +52,6 @@ func LeaveRoom(roomID string, conn *websocket.Conn) {
 func BroadcastInRoom(roomID string, msg []byte) {
 	chatRoom := rooms[roomID]
 	chatRoom.messages = append(chatRoom.messages, msg)
-	log.Println(chatRoom.messages)
 	for conn := range chatRoom.users {
 		if err := conn.WriteMessage(websocket.TextMessage, msg); err != nil {
 			LeaveRoom(roomID, conn)
