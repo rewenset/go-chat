@@ -10,7 +10,11 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-var oneRoom []*websocket.Conn
+type simpleRoom struct {
+	users []*websocket.Conn
+}
+
+var rooms map[string]*simpleRoom
 var roomTmpl = template.Must(template.ParseFiles("room.html"))
 
 var upgrader = websocket.Upgrader{
@@ -19,7 +23,7 @@ var upgrader = websocket.Upgrader{
 }
 
 func main() {
-	oneRoom = make([]*websocket.Conn, 0, 5)
+	rooms = make(map[string]*simpleRoom)
 
 	r := mux.NewRouter().StrictSlash(true)
 
@@ -36,6 +40,12 @@ func index(w http.ResponseWriter, r *http.Request) {
 
 func room(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
+
+	if _, ok := rooms[vars["roomID"]]; !ok {
+		log.Printf("creating new room: %s", vars["roomID"])
+		rooms[vars["roomID"]] = &simpleRoom{}
+	}
+
 	if err := roomTmpl.Execute(w, vars["roomID"]); err != nil {
 		log.Printf("could not execute template: %v", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
@@ -43,12 +53,21 @@ func room(w http.ResponseWriter, r *http.Request) {
 }
 
 func chat(w http.ResponseWriter, r *http.Request) {
+	var chatRoom *simpleRoom
+	if cr, ok := rooms[mux.Vars(r)["roomID"]]; ok {
+		chatRoom = cr
+	} else {
+		http.Error(w, "chat room does not exist", http.StatusBadRequest)
+		return
+	}
+
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println(err)
 		return
 	}
-	oneRoom = append(oneRoom, conn)
+
+	chatRoom.users = append(chatRoom.users, conn)
 
 	for {
 		messageType, p, err := conn.ReadMessage()
@@ -58,9 +77,9 @@ func chat(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if messageType == websocket.TextMessage {
-			for i, c := range oneRoom {
+			for i, c := range chatRoom.users {
 				if err := c.WriteMessage(websocket.TextMessage, p); err != nil {
-					oneRoom = append(oneRoom[:i], oneRoom[i+1:]...)
+					chatRoom.users = append(chatRoom.users[:i], chatRoom.users[i+1:]...)
 					log.Println(err)
 				}
 			}
