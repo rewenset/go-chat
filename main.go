@@ -13,6 +13,8 @@ import (
 var indexTmpl = template.Must(template.ParseFiles("templates/index.html"))
 var roomTmpl = template.Must(template.ParseFiles("templates/room.html"))
 
+var hub = NewHub()
+
 var upgrader = websocket.Upgrader{
 	// do not check origin for now
 	CheckOrigin: func(r *http.Request) bool { return true },
@@ -46,26 +48,27 @@ func index(w http.ResponseWriter, r *http.Request) {
 }
 
 func newRoom(w http.ResponseWriter, r *http.Request) {
-	err := r.ParseForm()
-	if err != nil {
+	if err := r.ParseForm(); err != nil {
 		log.Printf("could not parse form: %v", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
-	} else {
-		roomID := r.PostFormValue("roomID")
-		err = CreateRoom(roomID)
-		if err != nil {
-			log.Printf("could not create room: %v", err)
-			http.Error(w, "room already exists", http.StatusBadRequest)
-		} else {
-			http.Redirect(w, r, fmt.Sprintf("http://%s/room/%s", r.Host, roomID), http.StatusFound)
-		}
+		return
 	}
+	roomID := r.PostFormValue("roomID")
+
+	_, err := hub.createRoom(roomID)
+	if err != nil {
+		log.Printf("could not create room: %v", err)
+		http.Error(w, "room already exists", http.StatusBadRequest)
+		return
+	}
+
+	http.Redirect(w, r, fmt.Sprintf("http://%s/room/%s", r.Host, roomID), http.StatusFound)
 }
 
 func room(w http.ResponseWriter, r *http.Request) {
 	roomID := mux.Vars(r)["roomID"]
 
-	if !IsRoomExist(roomID) {
+	if !hub.isRoomExist(roomID) {
 		http.Error(w, "chat room does not exist", http.StatusBadRequest)
 		return
 	}
@@ -73,14 +76,14 @@ func room(w http.ResponseWriter, r *http.Request) {
 	if err := roomTmpl.Execute(w, roomID); err != nil {
 		log.Printf("could not execute template: %v", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
-		return
 	}
 }
 
 func chat(w http.ResponseWriter, r *http.Request) {
 	roomID := mux.Vars(r)["roomID"]
-
-	if !IsRoomExist(roomID) {
+	room, err := hub.getRoom(roomID)
+	if err != nil {
+		log.Printf("could not get the room: %v", err)
 		http.Error(w, "chat room does not exist", http.StatusBadRequest)
 		return
 	}
@@ -91,17 +94,18 @@ func chat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	JoinRoom(roomID, conn)
+	room.join(conn)
 
 	for {
 		messageType, p, err := conn.ReadMessage()
 		log.Printf("message received (type %d)", messageType)
 		if err != nil {
 			log.Println(err)
-			LeaveRoom(roomID, conn)
+			room.leave(conn)
 			break
-		} else if messageType == websocket.TextMessage {
-			BroadcastInRoom(roomID, p)
+		}
+		if messageType == websocket.TextMessage {
+			room.broadcast(p)
 		}
 	}
 }
