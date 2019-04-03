@@ -105,7 +105,7 @@ func chat(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 		if messageType == websocket.TextMessage {
-			room.broadcast(p)
+			room.bc <- p
 		}
 	}
 }
